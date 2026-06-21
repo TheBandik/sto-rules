@@ -214,9 +214,40 @@
 #E[
   #set text(size: 9pt)
   #set par(first-line-indent: 0pt, leading: 0.5em)
+  // Размерные линии полей
+  #let dim-stroke = (paint: mid, thickness: 0.35pt, dash: "dashed")
+  #let dim-label(body) = text(size: 6.5pt, fill: mid)[#body]
+  // Наконечники стрелок
+  // Размер 3pt учитывается в h-dim/v-dim
+  #let h-head-left = box(width: 3pt, height: 4pt)[#polygon(fill: mid, (0pt, 2pt), (3pt, 0pt), (3pt, 4pt))]
+  #let h-head-right = box(width: 3pt, height: 4pt)[#polygon(fill: mid, (3pt, 2pt), (0pt, 0pt), (0pt, 4pt))]
+  #let v-head-top = box(width: 4pt, height: 3pt)[#polygon(fill: mid, (2pt, 0pt), (0pt, 3pt), (4pt, 3pt))]
+  #let v-head-bottom = box(width: 4pt, height: 3pt)[#polygon(fill: mid, (2pt, 3pt), (0pt, 0pt), (4pt, 0pt))]
+  // Горизонтальная и вертикальная размерные стрелки
+  #let h-dim(len) = box(width: len, height: 0pt)[
+    #place(left + horizon, dx: 0cm)[#line(length: len, stroke: dim-stroke)]
+    #place(left + horizon, dx: 0cm)[#h-head-left]
+    #place(left + horizon, dx: len - 3pt)[#h-head-right]
+  ]
+  #let v-dim(len) = box(width: 0pt, height: len)[
+    #place(center + top, dy: 0cm)[#line(length: len, angle: 90deg, stroke: dim-stroke)]
+    #place(center + top, dy: 0cm)[#v-head-top]
+    #place(center + top, dy: len - 3pt)[#v-head-bottom]
+  ]
   #align(center)[
     #box(width: 9.2cm, height: 12.8cm, stroke: 0.8pt + dark)[
       #place(top + right, dx: -0.44cm, dy: 0.43cm)[#text(size: 8pt)[3]]
+      // Верхнее и нижнее поля: 2 см
+      #place(top + left, dx: 4.6cm, dy: 0cm)[#v-dim(0.86cm)]
+      #place(top + left, dx: 4.43cm, dy: 1.12cm)[#dim-label[2 см]]
+      #place(top + left, dx: 4.6cm, dy: 11.94cm)[#v-dim(0.86cm)]
+      #place(bottom + left, dx: 4.43cm, dy: -1.12cm)[#dim-label[2 см]]
+      // Левое и правое поля: 3 см и 1 см
+      #place(top + left, dx: 0cm, dy: 6.4cm)[#h-dim(1.32cm)]
+      #place(top + left, dx: 1.55cm, dy: 6.31cm)[#dim-label[3 см]]
+      #place(top + left, dx: 8.76cm, dy: 6.4cm)[#h-dim(0.44cm)]
+      #place(top + left, dx: 8.1cm, dy: 6.31cm)[#dim-label[1 см]]
+      // Пунктирная рамка - область текста
       #place(top + left, dx: 1.32cm, dy: 0.86cm)[
         #rect(width: 7.44cm, height: 11.08cm, stroke: (paint: brd-dk, thickness: 0.5pt, dash: "dashed"))[
           #set align(center + horizon)
