@@ -5,7 +5,7 @@
 #set par(justify: true, leading: 0.5em, spacing: 0.6em, first-line-indent: 0pt)
 #show " – ": [~– ]
 #show table.cell.where(y: 0): set text(hyphenate: false)  // без переноса в заголовках столбцов
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #import fletcher.shapes: diamond, hexagon, parallelogram, pill
 
 // ── Палитра (монохром) ───────────────────────────────────────────────────
@@ -102,8 +102,7 @@
     #grid(
       columns: (1fr, 0pt),
       column-gutter: 0pt,
-      text(size: 11pt, style: "italic")[Пример],
-      margin-tag(item-code("E", example-count), fill: brd-dk),
+      text(size: 11pt, style: "italic")[Пример], margin-tag(item-code("E", example-count), fill: brd-dk),
     )
     #v(0.1em)
     #block(
@@ -166,6 +165,8 @@
 
 #align(center)[
   Составитель: Шнейдер А. Д.
+  #v(0.6em)
+  При участии: Водяницкий М. В., Ивин В. В., Тювеев А. В.
   #v(1.5em)
   Владивосток 2026
 ]
@@ -192,6 +193,37 @@
   Поскольку отдельные вопросы оформления в исходном стандарте не регламентированы, недостающие положения определены в рамках кафедры информационных технологий и систем ФГБОУ ВО «ВВГУ» в 2026 году и приведены в настоящем справочнике наравне с требованиями стандарта.
 
   Справочник носит вспомогательный характер. При расхождениях приоритет имеет действующая редакция стандарта СТО ВВГУ.
+
+  Над справочником работала экспертная группа кафедры информационных технологий и систем: Шнейдер А. Д., Водяницкий М. В., Ивин В. В., Тювеев А. В.
+]
+
+#v(1fr)
+
+#[
+  #set par(first-line-indent: 0pt, leading: wlead(1.5), justify: false)
+  #set text(hyphenate: false)
+
+  #let uline(w) = box(width: w, height: 0.85em, stroke: (bottom: 0.6pt + dark))
+  #let sigfield(name) = [#name / #uline(3.6cm) /]
+  #let datefield = [«#uline(0.8cm)» #uline(2.6cm) 2026 г.]
+
+  #grid(
+    columns: (1fr, auto),
+    align: (left + top, right + top),
+    [Составитель],
+    [#sigfield[Шнейдер А. Д.] \ #datefield],
+  )
+
+  #v(1.4em)
+  *СОГЛАСОВАНО*
+  #v(1.4em)
+
+  #grid(
+    columns: (1fr, auto),
+    align: (left + top, right + top),
+    [Заведующая кафедрой ИТС],
+    [#sigfield[Кийкова Е. В.] \ #datefield],
+  )
 ]
 
 // ═══════════════════════════════════════════════════════════════════════════
