@@ -19,6 +19,23 @@
 #let example-count = counter("sto-example")
 #let param-count = counter("sto-param")
 
+// Легенда (бейджи) для правил (параметров) и примеров
+#let two(n) = if n < 10 { "0" + str(n) } else { str(n) }
+#let item-code(prefix, item-counter) = context {
+  let sec = sec-count.get().at(0)
+  let item = item-counter.get().at(0)
+  prefix + " " + two(sec) + "-" + two(item)
+}
+#let side-tag-width = 0.9cm
+#let side-tag-offset = 0.2cm
+#let side-tag(code, fill: dark) = rect(width: side-tag-width, height: 0.36cm, fill: fill, radius: 1pt)[
+  #set align(center + horizon)
+  #text(font: "Arial", size: 6.5pt, weight: "bold", fill: white)[#code]
+]
+#let margin-tag(code, dx: side-tag-offset, fill: dark) = box(width: 0pt)[
+  #place(left + top, dx: dx)[#side-tag(code, fill: fill)]
+]
+
 // ── Межстрочный интервал «как в Word» ──────────────────────────────────────
 // В Word множитель применяется к высоте строки шрифта (для TNR ≈ 1.15 × кегль),
 // а не к голому кеглю. В Typst leading — это зазор между строками; строчный бокс
@@ -49,7 +66,6 @@
 // Блок параметров
 #let R(body) = {
   rule-count.step()
-  param-count.update(0)
   block(
     width: 100%,
     stroke: (left: 2.5pt + dark, rest: 0.4pt + brd),
@@ -61,11 +77,17 @@
 
 // Строка параметра внутри R
 #let P(param, val) = {
-  param-count.step()
+  // Если нет второго тела - значит это не параметр, а подраздел
+  let is-subhead = val == []
+  if not is-subhead {
+    param-count.step()
+  }
   grid(
-    columns: (4cm, 1fr),
-    column-gutter: 0.5em,
-    text(weight: "bold", size: 13pt)[#param], val,
+    columns: (4cm, 1fr, 0pt),
+    column-gutter: (0.5em, 0pt),
+    text(weight: "bold", size: 13pt)[#param],
+    val,
+    if not is-subhead { margin-tag(item-code("P", param-count), dx: side-tag-offset + 8pt) },
   )
   v(0.5em)
 }
@@ -75,7 +97,12 @@
   example-count.step()
   v(0.2em)
   block(breakable: false)[
-    #text(size: 11pt, style: "italic")[Пример]
+    #grid(
+      columns: (1fr, 0pt),
+      column-gutter: 0pt,
+      text(size: 11pt, style: "italic")[Пример],
+      margin-tag(item-code("E", example-count), fill: brd-dk),
+    )
     #v(0.1em)
     #block(
       width: 100%,
