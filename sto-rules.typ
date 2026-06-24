@@ -144,12 +144,18 @@
 
 // Важно
 #let W(body) = {
+  param-count.step()
   block(
     width: 100%,
     stroke: (left: 2.5pt + dark, rest: 0.4pt + brd),
     inset: (left: 10pt, right: 8pt, y: 7pt),
   )[
-    #text(size: 12pt, weight: "bold")[!#h(0.4em)]#body
+    #grid(
+      columns: (1fr, 0pt),
+      column-gutter: 0pt,
+      [#text(size: 12pt, weight: "bold")[!#h(0.4em)]#body],
+      margin-tag(item-code("P", param-count), dx: side-tag-offset + 8pt),
+    )
   ]
   v(0.25em)
 }
