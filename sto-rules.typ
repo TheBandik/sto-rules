@@ -46,6 +46,7 @@
 #let rule-count = counter("sto-rule")
 #let example-count = counter("sto-example")
 #let param-count = counter("sto-param")
+#let rule-param-state = state("sto-rule-param", 0)
 
 // Легенда (бейджи) для правил (параметров) и примеров
 #let two(n) = if n < 10 { "0" + str(n) } else { str(n) }
@@ -94,6 +95,7 @@
 // Блок параметров
 #let R(body) = {
   rule-count.step()
+  rule-param-state.update(0)
   block(
     width: 100%,
     stroke: (left: 2.5pt + dark, rest: 0.4pt + brd),
@@ -105,16 +107,28 @@
 
 // Строка параметра внутри R
 #let P(param, val) = {
+  context {
+    if rule-param-state.get() > 0 {
+      block(width: 100%, height: 0pt, above: 0pt, below: 6pt, breakable: false)[
+        #line(length: 100%, stroke: (paint: brd-dk, thickness: 0.6pt, dash: (array: (0.25pt, 0.9pt), phase: 0pt)))
+      ]
+    }
+  }
   // Если нет второго тела - значит это не параметр, а подраздел
   let is-subhead = val == []
   if not is-subhead {
     param-count.step()
   }
-  grid(
+  context grid(
     columns: (4cm, 1fr, 0pt),
     column-gutter: (0.5em, 0pt),
-    text(weight: "bold", size: 13pt)[#param],
-    val,
+    {
+      rule-param-state.update(n => n + 1)
+      text(weight: "bold", size: 13pt)[#param]
+    },
+    {
+      val
+    },
     if not is-subhead { margin-tag(item-code("P", param-count), dx: side-tag-offset + 8pt) },
   )
   v(0.5em)
