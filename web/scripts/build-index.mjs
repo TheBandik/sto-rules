@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -11,6 +12,7 @@ const root = path.resolve(
 );
 const web = path.join(root, "web");
 const source = path.join(root, "sto-rules.typ");
+const pdfPath = path.join(root, "sto-rules.pdf");
 const publicDir = path.join(web, "public");
 const execFileAsync = promisify(execFile);
 
@@ -92,6 +94,100 @@ function label(kind, sectionNumber, itemNumber) {
 function parsePt(value) {
   if (typeof value === "number") return value;
   return Number.parseFloat(String(value).replace("pt", "")) || 0;
+}
+
+async function readPdfPositions(items) {
+  const data = new Uint8Array(await readFile(pdfPath));
+  const document = await pdfjs.getDocument({ data, disableWorker: true })
+    .promise;
+  const byCode = new Map();
+  const codeRe = /^[PE]\s*(\d\d)-(\d\d)$/;
+
+  for (let pageNo = 1; pageNo <= document.numPages; pageNo += 1) {
+    const page = await document.getPage(pageNo);
+    const content = await page.getTextContent({ includeMarkedContent: false });
+    for (const item of content.items) {
+      if (!("str" in item)) continue;
+      const match = item.str.trim().match(codeRe);
+      if (!match) continue;
+      const code = `${item.str.trim()[0]}${match[1]}-${match[2]}`;
+      // First occurrence is the real badge in the document body; the generated
+      // TOC is at the end and would be seen later.
+      if (byCode.has(code)) continue;
+      byCode.set(code, {
+        page: pageNo,
+        x: item.transform[4],
+        y: page.view[3] - item.transform[5] - 13,
+      });
+    }
+  }
+
+  for (const item of items) {
+    const position = byCode.get(item.code);
+    if (position) Object.assign(item, position);
+  }
+
+  const missing = items.filter(
+    (item) => item.kind !== "section" && !byCode.has(item.code),
+  );
+  if (missing.length === 0) {
+    for (const section of toc) {
+      const firstItem = section.items[0];
+      if (!firstItem) continue;
+      section.page = firstItem.page;
+      section.x = firstItem.x;
+      section.y = Math.max(0, firstItem.y - 28);
+    }
+    return;
+  }
+
+  const links = [];
+  for (let pageNo = 1; pageNo <= document.numPages; pageNo += 1) {
+    const page = await document.getPage(pageNo);
+    const annotations = await page.getAnnotations();
+    const pageLinks = annotations
+      .filter((annotation) => annotation.subtype === "Link" && annotation.dest)
+      .sort((a, b) => b.rect[1] - a.rect[1] || a.rect[0] - b.rect[0]);
+    links.push(...pageLinks);
+  }
+
+  const itemAnchors = items.filter((item) => item.items === undefined);
+  const tocLinks = links.slice(-itemAnchors.length);
+
+  for (
+    let index = 0;
+    index < Math.min(tocLinks.length, itemAnchors.length);
+    index += 1
+  ) {
+    if (itemAnchors[index].x !== undefined) continue;
+    const link = tocLinks[index];
+    if (!Array.isArray(link.dest) || !link.dest[0])
+      throw new Error("Unsupported PDF link destination");
+    const pageNo = (await document.getPageIndex(link.dest[0])) + 1;
+    const page = await document.getPage(pageNo);
+    Object.assign(itemAnchors[index], {
+      page: pageNo,
+      x: Number(link.dest[2]) || 0,
+      y: page.view[3] - (Number(link.dest[3]) || page.view[3]),
+    });
+  }
+
+  const stillMissing = itemAnchors.filter((item) => item.x === undefined);
+  if (stillMissing.length > 0)
+    throw new Error(
+      `Could not find PDF positions for ${stillMissing.length} anchors: ${stillMissing
+        .slice(0, 5)
+        .map((item) => item.code)
+        .join(", ")}`,
+    );
+
+  for (const section of toc) {
+    const firstItem = section.items[0];
+    if (!firstItem) continue;
+    section.page = firstItem.page;
+    section.x = firstItem.x;
+    section.y = Math.max(0, firstItem.y - 28);
+  }
 }
 
 // Считает нижнюю границу подсветки
@@ -226,6 +322,15 @@ ${chunk.map((item) => `  { let found = query(<${item.label}>); ("${item.label}",
   console.warn(
     `Could not read Typst label positions: ${error.stderr || error.message}`,
   );
+  try {
+    // GitHub Actions не ставит Typst. Готовый PDF уже содержит координаты:
+    // сначала берем бейджи в теле документа, затем ссылки из встроенного TOC.
+    await readPdfPositions(anchors);
+  } catch (pdfError) {
+    console.warn(
+      `Could not read PDF link positions: ${pdfError.stderr || pdfError.message}`,
+    );
+  }
 }
 
 for (const section of toc) {

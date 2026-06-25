@@ -37,17 +37,29 @@ export default function PdfViewer({
   const [searchEntries, setSearchEntries] = useState<SearchEntry[]>([]);
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [hitIndex, setHitIndex] = useState(0);
+  const [pdfLoading, setPdfLoading] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   const renderIdRef = useRef(0);
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const swipeRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+    swiping: boolean;
+  } | null>(null);
   const textLayerDisabledRef = useRef(false);
   const renderScale = scale * zoom;
 
   useEffect(() => {
     // PDF загружается один раз при смене файла
-    pdfjsLib.getDocument({ url: file }).promise.then(setPdf);
+    setPdfLoading(true);
+    setPdf(null);
+    pdfjsLib
+      .getDocument({ url: file })
+      .promise.then(setPdf)
+      .finally(() => setPdfLoading(false));
   }, [file]);
 
   useEffect(() => {
@@ -139,19 +151,59 @@ export default function PdfViewer({
         touches[0].clientY - touches[1].clientY,
       );
     function onTouchStart(event: TouchEvent) {
-      if (event.touches.length === 2)
+      if (event.touches.length === 1) {
+        const touch = event.touches[0];
+        swipeRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          time: Date.now(),
+          swiping: false,
+        };
+      }
+      if (event.touches.length === 2) {
+        swipeRef.current = null;
         pinchRef.current = { distance: distance(event.touches), zoom };
+      }
     }
     function onTouchMove(event: TouchEvent) {
-      if (event.touches.length !== 2 || !pinchRef.current) return;
-      event.preventDefault();
-      const next =
-        pinchRef.current.zoom *
-        (distance(event.touches) / pinchRef.current.distance);
-      setZoom(Math.max(0.6, Math.min(3.2, next)));
+      if (event.touches.length === 2 && pinchRef.current) {
+        event.preventDefault();
+        const next =
+          pinchRef.current.zoom *
+          (distance(event.touches) / pinchRef.current.distance);
+        setZoom(Math.max(0.6, Math.min(3.2, next)));
+        return;
+      }
+      if (event.touches.length !== 1 || !swipeRef.current) return;
+      const touch = event.touches[0];
+      const dx = touch.clientX - swipeRef.current.x;
+      const dy = touch.clientY - swipeRef.current.y;
+      if (
+        !swipeRef.current.swiping &&
+        Math.abs(dx) > 24 &&
+        Math.abs(dx) > Math.abs(dy) * 1.4
+      )
+        swipeRef.current.swiping = true;
+      if (swipeRef.current.swiping) event.preventDefault();
     }
     function onTouchEnd(event: TouchEvent) {
       if (event.touches.length < 2) pinchRef.current = null;
+      const swipe = swipeRef.current;
+      swipeRef.current = null;
+      if (!swipe || !swipe.swiping || !pdf) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - swipe.x;
+      const dy = touch.clientY - swipe.y;
+      const elapsed = Date.now() - swipe.time;
+      if (
+        elapsed > 700 ||
+        Math.abs(dx) < 70 ||
+        Math.abs(dx) < Math.abs(dy) * 1.4
+      )
+        return;
+      setPage((value) =>
+        Math.min(pdf.numPages, Math.max(1, value + (dx < 0 ? 1 : -1))),
+      );
     }
     wrap.addEventListener("touchstart", onTouchStart, { passive: false });
     wrap.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -163,7 +215,7 @@ export default function PdfViewer({
       wrap.removeEventListener("touchend", onTouchEnd);
       wrap.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [zoom]);
+  }, [pdf, zoom]);
 
   useEffect(() => {
     // Автомасштаб подгоняет страницу под доступную область
@@ -370,6 +422,12 @@ export default function PdfViewer({
         </section>
       )}
       <div className="canvasWrap" ref={wrapRef} tabIndex={0}>
+        {pdfLoading && (
+          <div className="pdfLoader" role="status" aria-live="polite">
+            <span />
+            Загрузка PDF...
+          </div>
+        )}
         <div
           className="pageLayer"
           style={{ width: canvasSize.width, height: canvasSize.height }}

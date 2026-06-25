@@ -289,6 +289,7 @@ button {
 
 /* Слой PDF */
 .canvasWrap {
+  position: relative;
   min-height: 0;
   height: 100%;
   overflow: auto;
@@ -297,6 +298,32 @@ button {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
+}
+.pdfLoader {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  color: #eef2ff;
+  background: rgba(32, 33, 36, 0.72);
+  font-size: 14px;
+  pointer-events: none;
+}
+.pdfLoader span {
+  width: 38px;
+  height: 38px;
+  justify-self: center;
+  border: 4px solid rgba(238, 242, 255, 0.28);
+  border-top-color: #eef2ff;
+  border-radius: 50%;
+  animation: loaderSpin 0.8s linear infinite;
+}
+@keyframes loaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .canvasWrap:focus {
   outline: none;
