@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +10,7 @@ import {
 } from "lucide-react";
 import { RuleItem, RulesIndex, SearchEntry } from "../types";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
 
 // PDF.js viewer с подсветкой правил и своим поиском
 type Props = {
