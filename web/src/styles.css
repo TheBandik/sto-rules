@@ -458,13 +458,14 @@ canvas {
     width: min(88vw, 360px);
     transform: translateX(-100%);
     transition: transform 0.2s ease;
-    box-shadow: 18px 0 50px rgba(0, 0, 0, 0.45);
+    box-shadow: none;
   }
   .sidebarCollapsed .tocPanel {
     width: min(88vw, 360px);
   }
   .tocPanel.open {
     transform: translateX(0);
+    box-shadow: 18px 0 50px rgba(0, 0, 0, 0.45);
   }
   .tocBackdrop {
     display: block;
