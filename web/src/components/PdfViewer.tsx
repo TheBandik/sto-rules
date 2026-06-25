@@ -43,6 +43,8 @@ export default function PdfViewer({
   const textLayerRef = useRef<HTMLDivElement>(null);
   const renderIdRef = useRef(0);
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const ignoreSwipeUntilRef = useRef(0);
+  const swipeDisabledRef = useRef(false);
   const swipeRef = useRef<{
     x: number;
     y: number;
@@ -76,6 +78,11 @@ export default function PdfViewer({
     // Deep link меняет текущую страницу
     if (target) setPage(Math.max(1, target.page));
   }, [target]);
+
+  useEffect(() => {
+    // После pinch перелистывание свайпом возвращается только при обычном масштабе.
+    if (zoom === 1) swipeDisabledRef.current = false;
+  }, [zoom]);
 
   useEffect(() => {
     // Стрелки вверх и вниз листают страницы PDF
@@ -151,7 +158,12 @@ export default function PdfViewer({
         touches[0].clientY - touches[1].clientY,
       );
     function onTouchStart(event: TouchEvent) {
-      if (event.touches.length === 1) {
+      if (
+        event.touches.length === 1 &&
+        Date.now() >= ignoreSwipeUntilRef.current &&
+        !swipeDisabledRef.current &&
+        zoom === 1
+      ) {
         const touch = event.touches[0];
         swipeRef.current = {
           x: touch.clientX,
@@ -168,6 +180,9 @@ export default function PdfViewer({
     function onTouchMove(event: TouchEvent) {
       if (event.touches.length === 2 && pinchRef.current) {
         event.preventDefault();
+        swipeRef.current = null;
+        swipeDisabledRef.current = true;
+        ignoreSwipeUntilRef.current = Date.now() + 600;
         const next =
           pinchRef.current.zoom *
           (distance(event.touches) / pinchRef.current.distance);
@@ -190,6 +205,8 @@ export default function PdfViewer({
       if (event.touches.length < 2) pinchRef.current = null;
       const swipe = swipeRef.current;
       swipeRef.current = null;
+      if (zoom !== 1) swipeDisabledRef.current = true;
+      if (Date.now() < ignoreSwipeUntilRef.current) return;
       if (!swipe || !swipe.swiping || !pdf) return;
       const touch = event.changedTouches[0];
       const dx = touch.clientX - swipe.x;
